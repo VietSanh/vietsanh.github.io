@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản lý danh sách phim</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f8f9fa;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #controls {
+      margin-bottom: 15px;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+    }
+    #movieForm {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    #movieForm input {
+      padding: 6px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+    }
+    #movieForm button {
+      padding: 6px 12px;
+      border: none;
+      background: #28a745;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #movieForm button:hover {
+      background: #218838;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      margin-top: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    td img {
+      width: 60px;
+      height: auto;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    td img:hover {
+      transform: scale(1.1);
+    }
+    .action-btn {
+      margin-right: 5px;
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .edit-btn {
+      background: #ffc107;
+      color: black;
+    }
+    .delete-btn {
+      background: #dc3545;
+      color: white;
+    }
+    /* Popup */
+    .popup {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    .popup img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Danh sách phim</h1>
+
+  <!-- Thanh tìm kiếm -->
+  <div id="controls">
+    <input type="text" id="searchInput" placeholder="Tìm kiếm tên phim...">
+  </div>
+
+  <!-- Form thêm / chỉnh sửa -->
+  <form id="movieForm">
+    <input type="text" id="movieName" placeholder="Tên phim" required>
+    <input type="text" id="movieDisk" placeholder="Ổ cứng chứa" required>
+    <input type="url" id="moviePoster" placeholder="Link poster" required>
+    <button type="submit">Lưu</button>
+  </form>
+
+  <!-- Bảng danh sách -->
+  <table>
+    <thead>
+      <tr>
+        <th>Tên phim</th>
+        <th>Ổ cứng</th>
+        <th>Poster</th>
+        <th>Hành động</th>
+      </tr>
+    </thead>
+    <tbody id="movieTable"></tbody>
+  </table>
+
+  <!-- Popup Poster -->
+  <div class="popup" id="popup" onclick="closePopup()">
+    <img id="popupImg" src="" alt="Poster">
+  </div>
+
+  <script>
+    let movies = JSON.parse(localStorage.getItem("movies")) || [];
+    let editIndex = -1;
+
+    const form = document.getElementById("movieForm");
+    const movieTable = document.getElementById("movieTable");
+    const searchInput = document.getElementById("searchInput");
+    const popup = document.getElementById("popup");
+    const popupImg = document.getElementById("popupImg");
+
+    // Render danh sách phim
+    function renderMovies(filter="") {
+      movieTable.innerHTML = "";
+      movies
+        .filter(m => m.name.toLowerCase().includes(filter.toLowerCase()))
+        .forEach((movie, index) => {
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>${movie.name}</td>
+            <td>${movie.disk}</td>
+            <td><img src="${movie.poster}" alt="${movie.name}" onclick="showPoster('${movie.poster}')"></td>
+            <td>
+              <button class="action-btn edit-btn" onclick="editMovie(${index})">Sửa</button>
+              <button class="action-btn delete-btn" onclick="deleteMovie(${index})">Xóa</button>
+            </td>
+          `;
+          movieTable.appendChild(row);
+        });
+      localStorage.setItem("movies", JSON.stringify(movies));
+    }
+
+    // Thêm / sửa phim
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const name = document.getElementById("movieName").value;
+      const disk = document.getElementById("movieDisk").value;
+      const poster = document.getElementById("moviePoster").value;
+
+      if (editIndex === -1) {
+        movies.push({ name, disk, poster });
+      } else {
+        movies[editIndex] = { name, disk, poster };
+        editIndex = -1;
+      }
+
+      form.reset();
+      renderMovies(searchInput.value);
+    });
+
+    // Xóa phim
+    function deleteMovie(index) {
+      if (confirm("Bạn có chắc muốn xóa phim này?")) {
+        movies.splice(index, 1);
+        renderMovies(searchInput.value);
+      }
+    }
+
+    // Sửa phim
+    function editMovie(index) {
+      const movie = movies[index];
+      document.getElementById("movieName").value = movie.name;
+      document.getElementById("movieDisk").value = movie.disk;
+      document.getElementById("moviePoster").value = movie.poster;
+      editIndex = index;
+    }
+
+    // Tìm kiếm phim
+    searchInput.addEventListener("input", () => {
+      renderMovies(searchInput.value);
+    });
+
+    // Popup Poster
+    function showPoster(url) {
+      popupImg.src = url;
+      popup.style.display = "flex";
+    }
+    function closePopup() {
+      popup.style.display = "none";
+    }
+
+    // Render ban đầu
+    renderMovies();
+  </script>
+</body>
+</html>
